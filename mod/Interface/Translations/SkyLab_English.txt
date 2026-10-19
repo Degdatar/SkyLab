@@ -1,0 +1,2 @@
+$SkyLab_Title	Toggle SkyLab
+$SkyLab_Hint	Aim at object + press hotkey to inspect its NIF

@@ -1,0 +1,9 @@
+build/
+out/
+contrib/SKSE/Plugins/SkyLab.dll
+contrib/SKSE/Plugins/SkyLab.pdb
+*.log
+*.ini
+!mod/SKSE/Plugins/SkyLab.ini.example
+__pycache__/
+*.pex

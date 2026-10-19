@@ -1,0 +1,9 @@
+[Plugin]
+Name = "SkyLab"
+Author = "SkyLab Team"
+Version = "1.0.0"
+SupportsLightPlugins = false
+
+[Compatibility]
+AddressLibrary = true
+RuntimeName = "Skyrim Anniversary Edition"
