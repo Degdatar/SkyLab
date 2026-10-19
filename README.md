@@ -1,4 +1,5 @@
 # SkyLab
+<<<<<<< HEAD
 
 SkyLab is an in-game asset inspection and preview ,replacement tool for Skyrim Anniversary Edition. It runs as an SKSE plugin and opens an ImGui-based editor inside Skyrim.
 
@@ -52,3 +53,6 @@ Nifly
 ImGUI
 
 OBJ import creates static geometry. It does not generate a rig, skin weights, collision, or animation setup. NIF preview compatibility depends on the geometry and material features supported by the current parser and renderer.
+=======
+SkyLab is an in-game asset inspection and preview ,replacement tool for Skyrim Anniversary Edition. It runs as an SKSE plugin and opens an ImGui-based editor inside Skyrim
+>>>>>>> 87ba9ea7efba5adbf3b57f75e387f008f01cfe8f
