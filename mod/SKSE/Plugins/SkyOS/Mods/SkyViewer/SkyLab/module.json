@@ -6,6 +6,7 @@
   "requiredCore": "SkyOS.dll",
   "appPlugin": "SkyLab.dll",
   "showInSkyApps": true,
+  "nativeAppId": "SkyLab",
   "settings": [
     {
       "id": "openHotkey",
