@@ -46,7 +46,7 @@ The example configuration is in `mod/SKSE/Plugins/SkyLab.ini.example`. Papyrus s
 - **Left click:** select a mesh.
 
 Big Thanks to 
-Nifly 
+Nifly and
 ImGUI
 
 OBJ import creates static geometry. It does not generate a rig, skin weights, collision, or animation setup. NIF preview compatibility depends on the geometry and material features supported by the current parser and renderer.
