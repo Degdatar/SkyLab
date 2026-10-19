@@ -13,7 +13,7 @@ SkyLab is an in-game asset inspection and preview ,replacement tool for Skyrim A
 - Export source NIFs and referenced textures.
 - Import an OBJ as a static Skyrim SE/AE NIF using Nifly. OBJ import does not create Skyrim skinning or animation data.
 - Papyrus API and optional SkyUI MCM support.
-- Replace NIF optiona
+- Replace NIF option
 - Replace Texture option
 ## Requirements
 
