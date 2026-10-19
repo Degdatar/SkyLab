@@ -4,6 +4,7 @@ namespace SkyLab::Config {
     struct Settings {
         uint32_t hotkey = 0x76; // F7 VK code
         uint32_t hotkeyMod = 0; // 0=none, 1=shift, 2=ctrl, 4=alt
+        bool     autoOpenCrosshair = true;
         bool     showCollision = true;
         bool     showWireframe = false;
         bool     showNormals = false;
@@ -18,5 +19,7 @@ namespace SkyLab::Config {
     Settings& Get();
     void Load();
     void Save();
+    bool PollSkyOSSettings(bool force = false);
+    std::string HotkeyLabel();
     fs::path GetIniPath();
 }

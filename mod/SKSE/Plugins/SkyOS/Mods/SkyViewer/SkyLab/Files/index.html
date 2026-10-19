@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SkyLab · SkyViewer</title>
+  <style>
+    :root{color-scheme:dark;--bg:#10171d;--panel:#14212a;--line:#31505e;--text:#e9f2f3;--muted:#bdcbd1;--cyan:#63daf2}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:14px/1.6 "Segoe UI",sans-serif}
+    main{width:100%;padding:20px}
+    .hero{position:relative;isolation:isolate;display:flex;align-items:center;min-height:230px;overflow:hidden;padding:26px;border:1px solid #44b9f277;border-radius:12px;background:#101a22}
+    .hero:before{position:absolute;z-index:-2;inset:0;content:"";background:url("{{SKYOS_BANNER}}") center/cover;opacity:.74}
+    .hero:after{position:absolute;z-index:-1;inset:0;content:"";background:linear-gradient(90deg,#07111df2 0%,#07111db5 54%,#07111d21 100%)}
+    .brand{display:flex;align-items:center;gap:20px;max-width:780px}
+    .brand img{width:min(26vw,190px);max-height:150px;object-fit:contain;filter:drop-shadow(0 4px 14px #000c)}
+    .eyebrow{margin:0;color:var(--cyan);font:11px/1.4 Consolas,monospace;letter-spacing:.17em;text-transform:uppercase}
+    h1{margin:5px 0 8px;color:#fff;font-size:30px;line-height:1.2}
+    .description{max-width:590px;margin:0;color:#d2e0e6;font-size:14px}
+    .overview{margin-top:15px;padding:17px 20px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(145deg,#17262c,#111a20)}
+    .overview h2{margin:0 0 4px;font-size:16px;color:#f3cd7e}
+    .overview p{margin:0;color:var(--muted)}
+    @media(max-width:600px){main{padding:12px}.hero{min-height:200px;padding:18px}.brand{gap:13px}.brand img{width:95px}.description{font-size:12px}}
+  </style>
+</head>
+<body>
+  <main>
+    <header class="hero">
+      <div class="brand">
+        <img src="{{SKYOS_LOGO}}" alt="SkyLab logo">
+        <div>
+          <p class="eyebrow">Powered by SkyOS</p>
+          <h1>SkyLab</h1>
+          <p class="description">An in-game 3D workspace for inspecting Skyrim meshes, textures, and NPC appearances without leaving your save.</p>
+        </div>
+      </div>
+    </header>
+    <section class="overview">
+      <h2>Inspect · Preview · Create</h2>
+      <p>Browse game assets, preview NIF geometry, inspect material references, and explore NPC appearance parts in the SkyLab editor.</p>
+    </section>
+  </main>
+</body>
+</html>

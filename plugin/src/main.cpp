@@ -17,6 +17,16 @@ namespace SKSE::log
     void SetupLogging();
 }
 
+namespace
+{
+    bool g_skyOSReady = false;
+
+    bool IsSkyOSLoaded()
+    {
+        return GetModuleHandleW(L"SkyOS.dll") != nullptr;
+    }
+}
+
 SKSEPluginLoad(const SKSE::LoadInterface* skse)
 {
     SKSE::log::SetupLogging();
@@ -42,6 +52,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse)
     // ========================================================
 
     SkyLab::Config::Load();
+    SkyLab::Config::PollSkyOSSettings(true);
 
     SKSE::log::info(
         "Hotkey VK {:x} mod {}",
@@ -80,24 +91,36 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse)
 
             case SKSE::MessagingInterface::kDataLoaded:
 
+                if (!IsSkyOSLoaded()) {
+                    SKSE::log::critical("SkyLab requires SkyOS.dll. SkyLab input and renderer hooks will remain disabled.");
+                    RE::SendHUDMessage::ShowHUDMessage("SkyLab requires SkyOS.dll and has been disabled.");
+                    break;
+                }
+
+                g_skyOSReady = true;
+
                 SKSE::log::info(
                     "kDataLoaded - installing SkyLab hooks");
 
                 SkyLab::InputHook::Install();
                 SkyLab::RendererHook::Install();
 
-                RE::SendHUDMessage::ShowHUDMessage(
-                "SkyLab loaded - press F7 on an object");
+                {
+                    const auto message = std::format("SkyLab loaded - press {} on an object", SkyLab::Config::HotkeyLabel());
+                    RE::SendHUDMessage::ShowHUDMessage(message.c_str());
+                }
 
                 break;
 
             case SKSE::MessagingInterface::kPostLoadGame:
+                if (!g_skyOSReady || !IsSkyOSLoaded()) break;
                 SkyLab::RendererHook::Install();
                 SKSE::log::info(
                     "Game loaded - SkyLab ready");
                 break;
 
             case SKSE::MessagingInterface::kNewGame:
+                if (!g_skyOSReady || !IsSkyOSLoaded()) break;
                 SkyLab::RendererHook::Install();
                 SKSE::log::info(
                     "New game - SkyLab ready");
@@ -109,8 +132,9 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse)
         });
 
     SKSE::log::info(
-        "{} loaded. Press F7 to open SkyLab editor.",
-        plugin->GetName());
+        "{} loaded. Press {} to open SkyLab editor.",
+        plugin->GetName(),
+        SkyLab::Config::HotkeyLabel());
 
     return true;
 }

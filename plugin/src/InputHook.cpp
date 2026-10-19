@@ -13,19 +13,15 @@ static bool HotkeyMatches(WPARAM vk){
     bool shift = GetAsyncKeyState(VK_SHIFT)&0x8000;
     bool ctrl  = GetAsyncKeyState(VK_CONTROL)&0x8000;
     bool alt   = GetAsyncKeyState(VK_MENU)&0x8000;
-    if(cfg.hotkeyMod==1 && !shift) return false;
-    if(cfg.hotkeyMod==2 && !ctrl) return false;
-    if(cfg.hotkeyMod==4 && !alt) return false;
-    if(cfg.hotkeyMod==0 && (shift||ctrl||alt)) {
-        // allow without modifier even if other keys held? be lenient — require exact
-        // but for F-keys we ignore modifiers
-        if(vk>=VK_F1 && vk<=VK_F24) { /* allow */ } else return false;
-    }
-    return true;
+    const std::uint32_t activeModifiers = (shift ? 1u : 0u) | (ctrl ? 2u : 0u) | (alt ? 4u : 0u);
+    return activeModifiers == cfg.hotkeyMod;
 }
 
 LRESULT InputHook::WndProcHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
     if(msg==WM_KEYDOWN || msg==WM_SYSKEYDOWN){
+        // SkyOS persists module settings in LocalAppData. Poll on input so a
+        // changed toggle binding takes effect even while SkyLab is closed.
+        Config::PollSkyOSSettings();
         const bool isRepeat = (lParam & (1LL << 30)) != 0;
         // Keep close/toggle keys ahead of ImGui's keyboard capture so there
         // is always a reliable way back to the game.
@@ -35,8 +31,9 @@ LRESULT InputHook::WndProcHook(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
         }
         if(!isRepeat && HotkeyMatches(wParam)){
             UIManager::Get().ToggleVisible();
-            // If becoming visible, try to auto-open crosshair nif once
-            if(UIManager::Get().IsVisible()){
+            // If enabled in the SkyViewer module, opening SkyLab also loads
+            // the NIF under the crosshair.
+            if(UIManager::Get().IsVisible() && Config::Get().autoOpenCrosshair){
                 // defer one frame so toggle doesn't steal key
                 // Try crosshair auto open if no nif loaded
                 // We don't have currentNif check here to keep header clean; just attempt

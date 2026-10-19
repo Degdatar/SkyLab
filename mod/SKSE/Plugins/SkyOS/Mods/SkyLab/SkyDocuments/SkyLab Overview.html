@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SkyLab — SkyOS Guide</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d141b;--panel:#15222d;--line:#294353;--text:#edf5f8;--muted:#b6c7d0;--cyan:#55d8ff;--gold:#f2c879}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 "Segoe UI",sans-serif}
+    .page{max-width:1100px;margin:0 auto;padding:24px}.hero{position:relative;display:flex;align-items:center;gap:24px;min-height:260px;padding:28px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#101820}
+    .hero:before{content:"";position:absolute;inset:0;background:url("../banner.png") center/cover no-repeat;opacity:.45}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#08121cee 0%,#08121d9c 60%,#08121d22 100%)}
+    .hero>*{position:relative;z-index:1}.logo{width:156px;height:156px;object-fit:contain;filter:drop-shadow(0 3px 18px #0009)}.hero-copy{max-width:680px}.eyebrow{color:var(--cyan);font-size:12px;letter-spacing:.18em;text-transform:uppercase;margin:0 0 8px}h1{font-size:42px;line-height:1.1;margin:0;color:#fff}h2{font-size:22px;color:var(--gold);margin:0 0 10px}p{margin:8px 0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:18px}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}.card ul{margin:10px 0 0;padding-left:22px;color:var(--muted)}li{padding:3px 0}.wide{grid-column:1/-1}.key{display:inline-block;color:#fff;background:#243d4b;border:1px solid #3e6475;border-radius:5px;padding:1px 7px;font:14px Consolas,monospace}.path{display:block;overflow-wrap:anywhere;padding:10px 12px;margin-top:10px;color:#9be6ff;background:#0b151c;border:1px solid var(--line);border-radius:7px;font:13px Consolas,monospace}.note{margin-top:12px;padding:12px;border-left:3px solid var(--gold);background:#ffffff08}.footer{text-align:center;color:#8399a5;font-size:12px;padding:20px}
+    @media(max-width:600px){.page{padding:12px}.hero{display:block;padding:20px}.logo{width:96px;height:96px}h1{font-size:32px}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <img class="logo" src="../logo.png" alt="SkyLab logo">
+      <div class="hero-copy"><p class="eyebrow">Powered by SkyOS</p><h1>SkyLab</h1><p>An in-game NIF inspection and preview editor for Skyrim SE and AE. Search game assets, inspect NPC appearances, and explore meshes without leaving Skyrim.</p></div>
+    </header>
+    <div class="grid">
+      <section class="card"><h2>Requirements</h2><ul><li>SkyOS Core with <code>SkyOS.dll</code>.</li><li>Skyrim SE or AE, SKSE, and the matching Address Library setup.</li><li>Install SkyLab and SkyOS in the same MO2 or Vortex profile.</li></ul><p class="note">SkyLab disables its input and renderer hooks when SkyOS Core is unavailable.</p></section>
+      <section class="card"><h2>Open and configure</h2><p>Press <span class="key">F7</span> to toggle SkyLab by default. Change the key and optional modifier in <b>SkyViewer → SkyLab</b>.</p><p>Modifier combinations are supported, including <span class="key">Alt + F1</span> and <span class="key">Shift + B</span>. Press <span class="key">Escape</span> to close.</p><p>Enable crosshair auto-open to inspect the game object you are aiming at when the editor opens.</p></section>
+      <section class="card"><h2>Search and preview</h2><ul><li>Search loose files and assets in loaded Skyrim BSA archives by NIF, texture, or linked in-game name.</li><li>Search NPCs by name, editor ID, FormID, or FaceGen NIF ID.</li><li>Select a result to open its mesh or NPC appearance in the preview.</li><li>Inspect mesh and texture paths and mesh properties.</li></ul></section>
+      <section class="card"><h2>Viewport options</h2><p>SkyViewer settings include collision display, wireframe, vertex normals, UV overlay, and preview field of view. They are stored separately for this module.</p><span class="path">%LOCALAPPDATA%\SkyOS\SkyViewer\SkyLab\settings.json</span></section>
+      <section class="card"><h2>OBJ import</h2><p>SkyLab can import OBJ geometry and write it as a static Skyrim SE/AE NIF using Nifly.</p><p class="note">Static OBJ imports do not include skin weights, skeleton bindings, or animation data. They will not deform as actor or wearable armor meshes.</p></section>
+      <section class="card"><h2>NPC preview note</h2><p>FaceGen tint geometry may appear separately from the face in the SkyLab preview. This preview behavior does not change the NPC in Skyrim.</p></section>
+      <section class="card wide"><h2>Guide</h2><p>See <b>SkyLab Guide.md</b> in this SkyDocuments collection for the feature summary, requirements, settings details, and OBJ import limits.</p></section>
+    </div>
+    <footer class="footer">SkyLab · Developed by Degdatar · Skyrim Special Edition / Anniversary Edition</footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,70 @@
+{
+  "name": "SkyLab",
+  "description": "Inspect Skyrim meshes, textures, and NPC appearances in an in-game 3D editor.",
+  "icon": "⚒",
+  "accent": "#38c9f4",
+  "requiredCore": "SkyOS.dll",
+  "appPlugin": "SkyLab.dll",
+  "showInSkyApps": true,
+  "settings": [
+    {
+      "id": "openHotkey",
+      "group": "Keyboard shortcuts",
+      "label": "Open SkyLab",
+      "type": "hotkey",
+      "default": "F7",
+      "description": "Open the SkyLab module in SkyViewer and toggle its in-game editor."
+    },
+    {
+      "id": "autoOpenCrosshair",
+      "group": "Editor workflow",
+      "label": "Open the crosshair target on toggle",
+      "type": "boolean",
+      "default": true,
+      "description": "When SkyLab opens, automatically load the NIF of the object under the crosshair."
+    },
+    {
+      "id": "showCollision",
+      "group": "Preview defaults",
+      "label": "Show collision by default",
+      "type": "boolean",
+      "default": true,
+      "description": "Show available collision information and preview geometry."
+    },
+    {
+      "id": "wireframe",
+      "group": "Preview defaults",
+      "label": "Start in wireframe mode",
+      "type": "boolean",
+      "default": false,
+      "description": "Draw preview meshes in wireframe when the editor opens."
+    },
+    {
+      "id": "vertexNormals",
+      "group": "Preview defaults",
+      "label": "Show vertex normals",
+      "type": "boolean",
+      "default": false,
+      "description": "Display normal vectors in the 3D preview."
+    },
+    {
+      "id": "uvOverlay",
+      "group": "Preview defaults",
+      "label": "Show UV overlay",
+      "type": "boolean",
+      "default": false,
+      "description": "Display UV coordinates in the 3D preview."
+    },
+    {
+      "id": "viewportFov",
+      "group": "Preview defaults",
+      "label": "Preview field of view",
+      "type": "number",
+      "default": 60,
+      "min": 30,
+      "max": 100,
+      "step": 1,
+      "description": "Adjust the 3D preview camera field of view."
+    }
+  ]
+}

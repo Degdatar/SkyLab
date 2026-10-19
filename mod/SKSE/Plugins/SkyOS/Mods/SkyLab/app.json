@@ -1,0 +1,9 @@
+{
+  "name": "SkyLab",
+  "plugin": "SkyLab.dll",
+  "requiredCore": "SkyOS.dll",
+  "viewerModule": "Data/SKSE/Plugins/SkyOS/Mods/SkyViewer/SkyLab/module.json",
+  "documents": "Data/SKSE/Plugins/SkyOS/Mods/SkyLab/SkyDocuments",
+  "settingsStorage": "%LOCALAPPDATA%/SkyOS/SkyViewer/SkyLab/settings.json",
+  "description": "In-game Skyrim NIF inspection, asset preview, and NPC appearance editor."
+}

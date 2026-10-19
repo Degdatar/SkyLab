@@ -18,6 +18,7 @@ OBJ imports create static geometry. They do not generate a character rig, skin w
 
 - Windows 10 or 11, Visual Studio 2022 with the C++ desktop workload, and CMake 3.21 or newer.
 - Skyrim SE/AE, SKSE64, and Address Library.
+- SkyOS Core (`SkyOS.dll`), installed in the same MO2/Vortex profile as SkyLab.
 - vcpkg packages: `fmt`, `spdlog`, and `directxtk`. Set `VCPKG_ROOT` to your vcpkg installation before configuring CMake.
 
 CMake fetches CommonLibSSE-NG, Dear ImGui, Nifly, and rapidcsv as build dependencies.
@@ -31,16 +32,16 @@ cmake -S . -B build -A x64
 cmake --build build --config Release --parallel
 ```
 
-The build copies `SkyLab.dll` to `contrib/SKSE/Plugins`. Install the contents of `contrib` and `mod` through a mod manager or into the Skyrim `Data` directory. Launch through SKSE and press **F7** to open or close SkyLab.
+The build copies `SkyLab.dll` to `contrib/SKSE/Plugins`. Install the plugin and the contents of `mod` through the same mod manager profile as SkyOS, or into the Skyrim `Data` directory. The SkyOS app module is under `mod/SKSE/Plugins/SkyOS/Mods/`. Launch through SKSE and use SkyViewer → SkyLab to configure and open SkyLab.
 
 ## Controls
 
-- **F7:** open or close the editor.
+- **F7 by default:** open or close the editor. In SkyViewer → SkyLab → Keyboard shortcuts, choose **Change** to record a key or chord such as `Alt+F1` or `Shift+B`; **Reset** restores F7.
 - **Escape:** close the editor.
 - **Left mouse drag:** orbit the preview.
 - **Right mouse drag:** pan the preview.
 - **Left click:** select a mesh.
 
-Configuration is stored in `Data/SKSE/Plugins/SkyLab.ini`. The example file is `mod/SKSE/Plugins/SkyLab.ini.example`; Papyrus source scripts are in `contrib/scripts/Source`.
+SkyViewer stores the module shortcut and preview preferences at `%LOCALAPPDATA%/SkyOS/SkyViewer/SkyLab/settings.json`. Papyrus source scripts are in `contrib/scripts/Source`.
 
 Thanks to the Nifly and Dear ImGui projects.
