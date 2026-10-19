@@ -1248,8 +1248,8 @@ namespace SkyLab
                 mesh.skinned = shape->IsSkinned();
                 source.GetTextureSlot(shape, mesh.diffuseTexture, 0);
                 source.GetTextureSlot(shape, mesh.normalTexture, 1);
-                source.GetTextureSlot(shape, mesh.glowTexture, 2);
-                source.GetTextureSlot(shape, mesh.specularTexture, 8);
+                source.GetTextureSlot(shape, mesh.glowTexture, 3);
+                source.GetTextureSlot(shape, mesh.specularTexture, 7);
                 includeTexture(mesh.diffuseTexture);
                 includeTexture(mesh.normalTexture);
                 includeTexture(mesh.glowTexture);
@@ -1545,23 +1545,27 @@ namespace SkyLab
             }
             if (!validIndices || mesh.indices.empty()) continue;
 
-            if (auto* shader = geometry->lightingShaderProp_cast()) {
-                auto normalizeTexturePath = [](std::string path) {
-                    std::replace(path.begin(), path.end(), '/', '\\');
-                    std::string lowerPath = Utils::ToLower(path);
-                    std::string dataRoot = Utils::GetDataPath();
-                    std::replace(dataRoot.begin(), dataRoot.end(), '/', '\\');
-                    const std::string lowerDataRoot = Utils::ToLower(dataRoot);
-                    if (!lowerDataRoot.empty() && lowerPath.rfind(lowerDataRoot, 0) == 0) {
-                        path.erase(0, dataRoot.size());
-                    } else if (lowerPath.rfind("data\\", 0) == 0) {
-                        path.erase(0, 5);
-                    }
-                    while (!path.empty() && path.front() == '\\') path.erase(path.begin());
-                    return path;
-                };
+            auto normalizeTexturePath = [](std::string path) {
+                std::replace(path.begin(), path.end(), '/', '\\');
+                std::string lowerPath = Utils::ToLower(path);
+                std::string dataRoot = Utils::GetDataPath();
+                std::replace(dataRoot.begin(), dataRoot.end(), '/', '\\');
+                const std::string lowerDataRoot = Utils::ToLower(dataRoot);
+                if (!lowerDataRoot.empty() && lowerPath.rfind(lowerDataRoot, 0) == 0) {
+                    path.erase(0, dataRoot.size());
+                } else if (lowerPath.rfind("data\\", 0) == 0) {
+                    path.erase(0, 5);
+                }
+                while (!path.empty() && path.front() == '\\') path.erase(path.begin());
+                return path;
+            };
 
-                auto* material = dynamic_cast<RE::BSLightingShaderMaterialBase*>(shader->GetBaseMaterial());
+            if (auto* shader = geometry->lightingShaderProp_cast()) {
+
+                auto* baseMaterial = shader->GetBaseMaterial();
+                auto* material = baseMaterial && baseMaterial->GetType() == RE::BSShaderMaterial::Type::kLighting
+                    ? static_cast<RE::BSLightingShaderMaterialBase*>(baseMaterial)
+                    : nullptr;
                 auto texturePath = [&](RE::BSTextureSet::Texture slot) {
                     if (material) {
                         auto textureSet = material->GetTextureSet();
@@ -1587,10 +1591,30 @@ namespace SkyLab
                     }
                 }
 
-                for (const auto* path : { &mesh.diffuseTexture, &mesh.normalTexture, &mesh.glowTexture, &mesh.specularTexture }) {
-                    if (!path->empty() && std::find(file.textureFiles.begin(), file.textureFiles.end(), *path) == file.textureFiles.end()) {
-                        file.textureFiles.push_back(*path);
+                mesh.shaderType = "Skyrim lighting material";
+            } else if (auto* property = runtime.shaderProperty.get(); property &&
+                       property->GetMaterialType() == RE::BSShaderMaterial::Type::kEffect) {
+                auto* effectProperty = static_cast<RE::BSEffectShaderProperty*>(property);
+                auto* material = effectProperty->GetMaterial();
+                if (material) {
+                    if (material->sourceTexturePath.data() && *material->sourceTexturePath.data()) {
+                        mesh.diffuseTexture = normalizeTexturePath(material->sourceTexturePath.data());
                     }
+                    if (mesh.diffuseTexture.empty()) {
+                        if (auto* texture = material->sourceTexture.get(); texture && texture->resourceStream) {
+                            RE::BSFixedString textureName;
+                            if (texture->resourceStream->DoGetName(textureName) && textureName.data() && *textureName.data()) {
+                                mesh.diffuseTexture = normalizeTexturePath(textureName.data());
+                            }
+                        }
+                    }
+                }
+                mesh.shaderType = "Skyrim effect material";
+            }
+
+            for (const auto* path : { &mesh.diffuseTexture, &mesh.normalTexture, &mesh.glowTexture, &mesh.specularTexture }) {
+                if (!path->empty() && std::find(file.textureFiles.begin(), file.textureFiles.end(), *path) == file.textureFiles.end()) {
+                    file.textureFiles.push_back(*path);
                 }
             }
 

@@ -94,6 +94,9 @@ namespace SkyLab
             ComPtr<ID3D11ShaderResourceView>
                 diffuse;
 
+            ComPtr<ID3D11ShaderResourceView>
+                normal;
+
             uint32_t vertexCount{ 0 };
             uint32_t indexCount{ 0 };
 
@@ -171,6 +174,9 @@ namespace SkyLab
 
         ComPtr<ID3D11DepthStencilState>
             depthState;
+
+        ComPtr<ID3D11BlendState>
+            alphaBlendState;
 
 
         ComPtr<ID3D11Texture2D>

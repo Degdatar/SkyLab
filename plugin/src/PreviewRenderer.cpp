@@ -31,6 +31,7 @@ struct VSOutput
     float3 normal   : TEXCOORD0;
     float2 uv       : TEXCOORD1;
     float4 color    : COLOR0;
+    float3 worldPosition : TEXCOORD2;
 };
 
 VSOutput main(VSInput input)
@@ -42,6 +43,8 @@ VSOutput main(VSInput input)
 
     output.position =
         mul(worldPosition, mvp);
+
+    output.worldPosition = worldPosition.xyz;
 
     output.normal =
         normalize(
@@ -71,6 +74,7 @@ cbuffer Frame : register(b0)
 };
 
 Texture2D diffuseTexture : register(t0);
+Texture2D normalTexture : register(t1);
 SamplerState textureSampler : register(s0);
 
 struct PSInput
@@ -79,12 +83,30 @@ struct PSInput
     float3 normal   : TEXCOORD0;
     float2 uv       : TEXCOORD1;
     float4 color    : COLOR0;
+    float3 worldPosition : TEXCOORD2;
 };
 
 float4 main(PSInput input) : SV_TARGET
 {
     float3 normal =
         normalize(input.normal);
+
+    if (options.w > 0.5)
+    {
+        float3 mappedNormal = normalTexture.Sample(textureSampler, input.uv).xyz * 2.0 - 1.0;
+        float3 positionDx = ddx(input.worldPosition);
+        float3 positionDy = ddy(input.worldPosition);
+        float2 uvDx = ddx(input.uv);
+        float2 uvDy = ddy(input.uv);
+        float3 tangent = positionDx * uvDy.y - positionDy * uvDx.y;
+        float3 bitangent = -positionDx * uvDy.x + positionDy * uvDx.x;
+        if (dot(tangent, tangent) > 0.0001 && dot(bitangent, bitangent) > 0.0001)
+        {
+            tangent = normalize(tangent);
+            bitangent = normalize(bitangent);
+            normal = normalize(tangent * mappedNormal.x + bitangent * mappedNormal.y + normal * mappedNormal.z);
+        }
+    }
 
     float3 light =
         normalize(lightDirection.xyz);
@@ -97,6 +119,9 @@ float4 main(PSInput input) : SV_TARGET
         diffuseTexture.Sample(
             textureSampler,
             input.uv);
+
+    float alpha = textureColor.a * input.color.a;
+    clip(alpha - 0.02);
 
     float3 base =
         textureColor.rgb *
@@ -115,7 +140,7 @@ float4 main(PSInput input) : SV_TARGET
 
     return float4(
         saturate(result),
-        textureColor.a);
+        alpha);
 }
 )";
     }
@@ -209,6 +234,7 @@ float4 main(PSInput input) : SV_TARGET
         wireRasterizer.Reset();
 
         depthState.Reset();
+        alphaBlendState.Reset();
 
         inputLayout.Reset();
 
@@ -453,11 +479,20 @@ float4 main(PSInput input) : SV_TARGET
         depth.DepthFunc =
             D3D11_COMPARISON_LESS;
 
+        if (FAILED(device->CreateDepthStencilState(&depth, &depthState))) {
+            return false;
+        }
 
-        return SUCCEEDED(
-            device->CreateDepthStencilState(
-                &depth,
-                &depthState));
+        D3D11_BLEND_DESC blend{};
+        blend.RenderTarget[0].BlendEnable = TRUE;
+        blend.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        blend.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        blend.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+        blend.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+        blend.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+        blend.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+        blend.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+        return SUCCEEDED(device->CreateBlendState(&blend, &alphaBlendState));
     }
 
 
@@ -690,6 +725,10 @@ float4 main(PSInput input) : SV_TARGET
             buffer.texture =
                 nifMesh.diffuseTexture;
 
+            if (nifMesh.hasUV && nifMesh.hasNormals && !nifMesh.normalTexture.empty()) {
+                buffer.normal = TextureManager::Get().GetSRV(nifMesh.normalTexture);
+            }
+
 
             auto overrideIt =
                 textureOverrides.find(
@@ -883,6 +922,9 @@ float4 main(PSInput input) : SV_TARGET
             1,
             &target,
             depthView.Get());
+
+        const float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
+        context->OMSetBlendState(alphaBlendState.Get(), blendFactor, 0xFFFFFFFFu);
 
         const float clearColor[4] = { 0.075f, 0.080f, 0.090f, 1.0f };
         context->ClearRenderTargetView(target, clearColor);
@@ -1088,7 +1130,9 @@ float4 main(PSInput input) : SV_TARGET
                     ? 1.0f
                     : 0.0f,
 
-                0.0f
+                mesh.normal
+                    ? 1.0f
+                    : 0.0f
             };
 
 
@@ -1146,15 +1190,17 @@ float4 main(PSInput input) : SV_TARGET
                 0);
 
 
-            ID3D11ShaderResourceView*
-                srv =
-                    mesh.diffuse.Get();
+            ID3D11ShaderResourceView* srvs[2] =
+            {
+                mesh.diffuse.Get(),
+                mesh.normal.Get()
+            };
 
 
             context->PSSetShaderResources(
                 0,
-                1,
-                &srv);
+                2,
+                srvs);
 
 
             context->DrawIndexed(
@@ -1164,12 +1210,11 @@ float4 main(PSInput input) : SV_TARGET
         }
 
 
-        ID3D11ShaderResourceView*
-            nullSRV = nullptr;
+        ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
 
         context->PSSetShaderResources(
             0,
-            1,
-            &nullSRV);
+            2,
+            nullSRVs);
     }
 }

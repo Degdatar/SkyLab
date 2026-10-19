@@ -29,6 +29,8 @@
 namespace SkyLab {
 
 namespace {
+    std::string g_imguiLayoutPath;
+
     fs::path ExportRoot()
     {
         const auto& configuredRoot = Config::Get().exportRoot;
@@ -290,7 +292,16 @@ bool UIManager::Init(ID3D11Device* device_, ID3D11DeviceContext* ctx_, HWND hwnd
     // Skyrim uses a single game HWND and a hidden/recentered hardware cursor.
     // Keep ImGui on that HWND and draw its software cursor in client space.
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.IniFilename = nullptr; // we manage
+    const fs::path layoutPath = fs::path(Utils::GetDataPath()) / "SKSE" / "Plugins" / "SkyLab_Layout.ini";
+    std::error_code layoutError;
+    fs::create_directories(layoutPath.parent_path(), layoutError);
+    if (!layoutError) {
+        g_imguiLayoutPath = layoutPath.string();
+        io.IniFilename = g_imguiLayoutPath.c_str();
+    } else {
+        io.IniFilename = nullptr;
+        logger::warn("SkyLab could not create ImGui layout directory '{}': {}", layoutPath.parent_path().string(), layoutError.message());
+    }
     ImGui::StyleColorsDark();
     // Skyrim-friendly style
     ImGuiStyle& s = ImGui::GetStyle();
@@ -1815,39 +1826,24 @@ bool UIManager::OpenNpcPreview(RE::TESNPC* npc, RE::Actor* liveActor)
             const auto key = Utils::ToLower(NormalizeAssetPath(model, "meshes"));
             if (bipedModelSet.insert(key).second) bipedModels.emplace_back(model);
         };
-        const auto sex = npc->GetSex() == RE::SEXES::kFemale ? RE::SEXES::kFemale : RE::SEXES::kMale;
         const auto faceGeometryPaths = NpcFaceGeometryPaths(npc);
-        std::unordered_set<std::string> faceGeometryKeys;
-        for (const auto& path : faceGeometryPaths) {
-            addBipedModel(path.c_str());
-            faceGeometryKeys.insert(Utils::ToLower(NormalizeAssetPath(path, "meshes")));
-        }
-        const auto* bodyPrefix = sex == RE::SEXES::kFemale ? "female" : "male";
-        for (const auto* part : {"body_0", "body_1", "hands_0", "hands_1", "feet_0", "feet_1"}) {
-            const auto modelPath = std::format("meshes\\actors\\character\\character assets\\{}{}.nif", bodyPrefix, part);
-            addBipedModel(modelPath.c_str());
-        }
-        std::function<void(RE::BGSHeadPart*)> addHeadModel = [&](RE::BGSHeadPart* part) {
-            if (!part) return;
-            addBipedModel(part->GetModel());
-            for (auto* extra : part->extraParts) addHeadModel(extra);
-        };
-        for (int i = 0; npc->headParts && i < npc->numHeadParts; ++i) addHeadModel(npc->headParts[i]);
-        if (auto* race = npc->GetRace()) addBipedModel(race->bodyTextureModels[sex].GetModel());
-        auto addArmorModels = [&](RE::TESObjectARMO* armor) {
-            if (!armor) return;
-            for (auto* addon : armor->armorAddons) {
-                if (addon && (!npc->GetRace() || addon->IsValidRace(npc->GetRace()))) addBipedModel(addon->bipedModels[sex].GetModel());
-            }
-        };
-        addArmorModels(npc->farSkin);
-        if (npc->defaultOutfit) npc->defaultOutfit->ForEachItem([&](RE::TESForm* form) {
-            if (auto* armor = form ? form->As<RE::TESObjectARMO>() : nullptr) addArmorModels(armor);
-            return RE::BSContainer::ForEachResult::kContinue;
-        });
         auto* actorRoot = actor->Get3D();
         if (actorRoot) roots.push_back(actorRoot);
+        auto* headAnchor = actorRoot
+            ? actorRoot->GetObjectByName(RE::BSFixedString("NPC Head [Head]"))
+            : nullptr;
+        if (!headAnchor) {
+            headAnchor = actor->GetHeadPartObject(RE::BGSHeadPart::HeadPartType::kFace);
+        }
+        // Head-part objects can be held outside the actor root on some actor
+        // states. Capture each one, de-duplicating by CaptureScene's visited set.
+        for (std::uint32_t type = 0; type < static_cast<std::uint32_t>(RE::BGSHeadPart::HeadPartType::kTotal); ++type) {
+            if (auto* head = actor->GetHeadPartObject(static_cast<RE::BGSHeadPart::HeadPartType>(type))) {
+                roots.push_back(head);
+            }
+        }
         if (const auto& biped = actor->GetBiped(false); biped) {
+            if (!actorRoot && biped->root) roots.insert(roots.begin(), biped->root);
             for (auto& part : biped->objects) {
                 // The actor root already contains these clones and their world
                 // transforms. Use detached clones only when there is no root.
@@ -1859,30 +1855,13 @@ bool UIManager::OpenNpcPreview(RE::TESNPC* npc, RE::Actor* liveActor)
                 }
             }
         }
-        if (!actorRoot) {
-            for (std::uint32_t type=0; type<static_cast<std::uint32_t>(RE::BGSHeadPart::HeadPartType::kTotal); ++type)
-                if (auto* head = actor->GetHeadPartObject(static_cast<RE::BGSHeadPart::HeadPartType>(type))) roots.push_back(head);
-        }
         auto live = NifParser::CaptureScene(roots, npc->GetName() ? npc->GetName() : "NPC");
         if (live.isValid) {
             for (const auto& model : bipedModels) {
-                const auto modelKey = Utils::ToLower(NormalizeAssetPath(model, "meshes"));
-                const bool isFaceGeometry = faceGeometryKeys.contains(modelKey);
-                // FaceGen meshes carry the NPC's actual head and must be decoded from
-                // their source NIF. The runtime scene path can return a partial actor
-                // snapshot (hands/feet only), which used to prevent FaceGen from loading.
                 auto fallback = NifParser::Parse(Utils::ResolveNifPath(model));
-                if ((!fallback.isValid || fallback.totalVerts == 0) ||
-                    (isFaceGeometry && fallback.meshes.empty()))
+                if (!fallback.isValid || fallback.totalVerts == 0)
                     fallback = NifParser::ParseGameResource(Utils::ResolveNifPath(model));
-                if (isFaceGeometry) {
-                    if (fallback.isValid && fallback.totalVerts > 0)
-                        SKSE::log::info("SkyLab NPC FaceGen loaded '{}': {} meshes, {} vertices", model, fallback.meshes.size(), fallback.totalVerts);
-                    else
-                        SKSE::log::warn("SkyLab NPC FaceGen unavailable at '{}': {}", model, fallback.error);
-                }
                 if (!fallback.isValid) continue;
-                if (faceGeometryKeys.contains(modelKey)) SetFaceTint(fallback, NpcFaceTintPathFromGeometry(model));
                 const auto normalizedModelPath = NormalizeAssetPath(model, "meshes");
                 for (auto& liveMesh : live.meshes) {
                     if (!liveMesh.sourcePath.empty()) continue;
@@ -1891,28 +1870,69 @@ bool UIManager::OpenNpcPreview(RE::TESNPC* npc, RE::Actor* liveActor)
                             return Utils::ToLower(candidate.name) == liveName;
                         })) liveMesh.sourcePath = normalizedModelPath;
                 }
-                if (isFaceGeometry) {
-                    // Preserve the runtime actor shapes and their transforms.
-                    // Only borrow FaceGen materials for matching shapes; never
-                    // replace runtime vertices with raw file-space FaceGen
-                    // geometry, which creates a second head at the wrong origin.
-                    for (auto& fallbackMesh : fallback.meshes) {
-                        fallbackMesh.sourcePath = normalizedModelPath;
-                        const auto fallbackName = Utils::ToLower(fallbackMesh.name);
-                        for (auto& liveMesh : live.meshes) {
-                            if (Utils::ToLower(liveMesh.name) != fallbackName) continue;
-                            if (liveMesh.diffuseTexture.empty()) liveMesh.diffuseTexture = fallbackMesh.diffuseTexture;
-                            if (liveMesh.normalTexture.empty()) liveMesh.normalTexture = fallbackMesh.normalTexture;
-                            if (liveMesh.specularTexture.empty()) liveMesh.specularTexture = fallbackMesh.specularTexture;
-                            break;
-                        }
-                    }
-                }
                 for (auto& fallbackMesh : fallback.meshes) fallbackMesh.sourcePath = normalizedModelPath;
                 std::unordered_set<std::string> captured;
                 for (const auto& mesh : live.meshes) if (!mesh.vertices.empty() && !mesh.indices.empty()) captured.insert(Utils::ToLower(mesh.name));
                 AppendFallbackMeshes(live, std::move(fallback), captured);
             }
+
+            // FaceGen geometry is stored in head-local space. Attach it to the
+            // live actor's head bone before adding it to the preview; appending
+            // its untransformed file vertices puts a second face at world origin.
+            RE::NiAVObject* captureRoot = actorRoot ? actorRoot : headAnchor;
+            if (!captureRoot && !roots.empty()) captureRoot = roots.front();
+            if (captureRoot && headAnchor) {
+                const RE::NiTransform faceToPreview = captureRoot->world.Invert() * headAnchor->world;
+                for (const auto& path : faceGeometryPaths) {
+                    auto face = NifParser::Parse(Utils::ResolveNifPath(path));
+                    if (!face.isValid || face.totalVerts == 0)
+                        face = NifParser::ParseGameResource(Utils::ResolveNifPath(path));
+                    if (!face.isValid || face.meshes.empty()) continue;
+
+                    const auto normalizedPath = NormalizeAssetPath(path, "meshes");
+                    SetFaceTint(face, NpcFaceTintPathFromGeometry(path));
+                    for (auto& mesh : face.meshes) {
+                        mesh.sourcePath = normalizedPath;
+                        mesh.previewTransform = {};
+                        for (auto& vertex : mesh.vertices) {
+                            const auto position = faceToPreview * RE::NiPoint3(vertex.pos.x, vertex.pos.y, vertex.pos.z);
+                            vertex.pos = {position.x, position.y, position.z};
+                            auto normal = faceToPreview.rotate * RE::NiPoint3(vertex.normal.x, vertex.normal.y, vertex.normal.z);
+                            const float length = normal.Length();
+                            if (length > 0.0001f) normal = normal / length;
+                            vertex.normal = {normal.x, normal.y, normal.z};
+                        }
+                    }
+
+                    NifFile unmatchedFaceMeshes;
+                    unmatchedFaceMeshes.isValid = true;
+                    unmatchedFaceMeshes.nodes.push_back(NifNode{});
+                    unmatchedFaceMeshes.nodes.front().name = "NPC FaceGen";
+                    for (auto& faceMesh : face.meshes) {
+                        auto liveMesh = std::find_if(live.meshes.begin(), live.meshes.end(), [&](const NifMesh& candidate) {
+                            return Utils::ToLower(candidate.name) == Utils::ToLower(faceMesh.name);
+                        });
+                        if (liveMesh == live.meshes.end()) {
+                            unmatchedFaceMeshes.meshes.push_back(std::move(faceMesh));
+                            continue;
+                        }
+                        faceMesh.blockIndex = liveMesh->blockIndex;
+                        faceMesh.name = liveMesh->name;
+                        *liveMesh = std::move(faceMesh);
+                    }
+                    for (const auto& texture : face.textureFiles) {
+                        if (std::find(live.textureFiles.begin(), live.textureFiles.end(), texture) == live.textureFiles.end())
+                            live.textureFiles.push_back(texture);
+                    }
+                    if (!unmatchedFaceMeshes.meshes.empty())
+                        AppendFallbackMeshes(live, std::move(unmatchedFaceMeshes));
+                    SKSE::log::info("SkyLab attached NPC FaceGen '{}': {} mesh(es) at the actor head", path, face.meshes.size());
+                    break;
+                }
+            } else if (!faceGeometryPaths.empty()) {
+                SKSE::log::warn("SkyLab could not attach NPC FaceGen: actor head bone was not available");
+            }
+
             EnrichSceneTextures(live, materials);
             RecalculateSceneBounds(live);
         }

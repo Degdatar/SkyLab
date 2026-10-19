@@ -454,8 +454,9 @@ namespace SkyLab
                 if (!geometry || !visited.insert(geometry).second) return RE::BSVisit::BSVisitControl::kContinue;
 
                 auto* shaderProperty = geometry->lightingShaderProp_cast();
-                auto* material = shaderProperty
-                    ? dynamic_cast<RE::BSLightingShaderMaterialBase*>(shaderProperty->GetBaseMaterial())
+                auto* baseMaterial = shaderProperty ? shaderProperty->GetBaseMaterial() : nullptr;
+                auto* material = baseMaterial && baseMaterial->GetType() == RE::BSShaderMaterial::Type::kLighting
+                    ? static_cast<RE::BSLightingShaderMaterialBase*>(baseMaterial)
                     : nullptr;
                 if (!material) {
                     return RE::BSVisit::BSVisitControl::kContinue;
